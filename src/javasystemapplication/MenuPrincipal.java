@@ -73,7 +73,10 @@ public class MenuPrincipal extends javax.swing.JFrame {
             dispose();
             new PantallaAlmacen().setVisible(true);
         });
-        btnProductos.addActionListener(e -> JOptionPane.showMessageDialog(this, "Abrir Productos"));
+        btnProductos.addActionListener(e -> {
+            dispose();
+            new PantallaProductos().setVisible(true);
+        });
         btnProveedores.addActionListener(e -> {
                 dispose();
                 new PantallaClientes().setVisible(true);
