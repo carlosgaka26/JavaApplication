@@ -16,7 +16,8 @@ public class PantallaProductos extends javax.swing.JFrame {
 
     private JTable tablaProductos;
     private DefaultTableModel modeloTabla;
-    private JButton btnAgregar, btnAlta, btnBaja, btnBuscar, btnEditar, btnEliminar, btnRegresar;
+    private JButton btnAgregar, btnAlta, btnBaja, btnBuscar, btnEditar, btnEliminar, btnInventario, btnRegresar;
+    private ProductoDAO productoDAO = new ProductoDAO();
 
     /**
      * Creates new form PantallaProductos
@@ -31,27 +32,18 @@ public class PantallaProductos extends javax.swing.JFrame {
         // 🔹 Modelo de tabla
         modeloTabla = new DefaultTableModel();
         modeloTabla.addColumn("Nombre Producto");
-        modeloTabla.addColumn("Unidad");
-        modeloTabla.addColumn("Clase");
-        modeloTabla.addColumn("Lote");
 
         // 🔹 Tabla con scroll
         tablaProductos = new JTable(modeloTabla);
         JScrollPane scrollPane = new JScrollPane(tablaProductos);
 
-        // 🔹 Panel superior (Alta y Baja)
-        JPanel panelSuperior = new JPanel(new FlowLayout());
-        btnAlta = new JButton("Alta");
-        btnBaja = new JButton("Baja");
-        panelSuperior.add(btnAlta);
-        panelSuperior.add(btnBaja);
-
-        // 🔹 Panel inferior (Agregar, Buscar, Editar, Eliminar, Regresar)
+        // 🔹 Panel inferior (Agregar, Buscar, Editar, Eliminar, Inventario, Regresar)
         JPanel panelInferior = new JPanel(new FlowLayout());
         btnAgregar = new JButton("Agregar Producto");
         btnBuscar = new JButton("Buscar");
         btnEditar = new JButton("Editar");
         btnEliminar = new JButton("Eliminar");
+        btnInventario = new JButton("Inventario");
         btnRegresar = new JButton("Regresar");
 
         panelInferior.add(btnAgregar);
@@ -60,12 +52,23 @@ public class PantallaProductos extends javax.swing.JFrame {
         panelInferior.add(btnEliminar);
         panelInferior.add(btnRegresar);
 
+        // 🔹 Panel superior (Alta, Baja e Inventario)
+        JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        btnAlta = new JButton("Alta");
+        btnBaja = new JButton("Baja");
+        btnInventario = new JButton("Inventario");
+        panelSuperior.add(btnAlta);
+        panelSuperior.add(btnBaja);
+        panelSuperior.add(btnInventario);
+
         add(panelSuperior, BorderLayout.NORTH);
         add(scrollPane, BorderLayout.CENTER);
         add(panelInferior, BorderLayout.SOUTH);
 
         // 🔹 Aplicar estilos a los botones
         aplicarEstilos();
+        // Cargar los productos en la tabla
+        cargarProductos();
 
         // 🚀 Espacios listos para eventos de botones
         btnAlta.addActionListener(e -> {
@@ -78,18 +81,65 @@ public class PantallaProductos extends javax.swing.JFrame {
 
         btnAgregar.addActionListener(e -> {
             // Aquí se agregará la funcionalidad para agregar un producto
+            dispose();
+            new AgregarProducto().setVisible(true);
         });
 
         btnBuscar.addActionListener(e -> {
             // Aquí se agregará la funcionalidad para buscar un producto
+            dispose();
+            new BuscarProducto().setVisible(true);
         });
 
         btnEditar.addActionListener(e -> {
             // Aquí se agregará la funcionalidad para editar un producto
+            int filaSeleccionada = tablaProductos.getSelectedRow();
+            if (filaSeleccionada != -1) {
+                String nombreProducto = (String) modeloTabla.getValueAt(filaSeleccionada, 0);
+                dispose();
+                new EditarProducto(nombreProducto).setVisible(true);
+            } else {
+                JOptionPane.showMessageDialog(null, "Selecciona un producto para editar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            }
         });
 
         btnEliminar.addActionListener(e -> {
             // Aquí se agregará la funcionalidad para eliminar un producto
+            int filaSeleccionada = tablaProductos.getSelectedRow();
+
+            if (filaSeleccionada != -1) {
+                String nombreProducto = (String) modeloTabla.getValueAt(filaSeleccionada, 0);
+
+                int confirmacion = JOptionPane.showConfirmDialog(null,
+                        "¿Seguro que deseas eliminar el producto '" + nombreProducto + "'?",
+                        "Confirmar Eliminación", JOptionPane.YES_NO_OPTION);
+
+                if (confirmacion == JOptionPane.YES_OPTION) {
+                    boolean eliminado = ProductoDAO.eliminarProducto(nombreProducto);
+
+                    if (eliminado) {
+                        JOptionPane.showMessageDialog(null, "Producto eliminado con éxito.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                        modeloTabla.removeRow(filaSeleccionada); // Eliminar de la tabla también
+                    } else {
+                        JOptionPane.showMessageDialog(null, "Error al eliminar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
+                    }
+                }
+            } else {
+                JOptionPane.showMessageDialog(null, "Selecciona un producto para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
+            }
+        });
+
+        btnAlta.addActionListener(e -> {
+
+        });
+
+        btnBaja.addActionListener(e -> {
+
+        });
+
+        btnInventario.addActionListener(e -> {
+            dispose();
+//            new PantallaInventario().setVisible(true);
         });
 
         btnRegresar.addActionListener(e -> {
@@ -158,7 +208,7 @@ public class PantallaProductos extends javax.swing.JFrame {
         });
     }
 
-    // 🔹 Aplicar estilos a los botones
+// 🔹 Aplicar estilos a los botones
     private void aplicarEstilos() {
         Color azul = new Color(0, 102, 204);
         Color rojo = new Color(204, 0, 0);
@@ -177,8 +227,20 @@ public class PantallaProductos extends javax.swing.JFrame {
         btnEditar.setForeground(blanco);
         btnEliminar.setBackground(rojo);
         btnEliminar.setForeground(blanco);
+        btnInventario.setBackground(azul);
+        btnInventario.setForeground(blanco);
         btnRegresar.setBackground(gris);
         btnRegresar.setForeground(blanco);
+    }
+
+    // 🔹 Método para cargar los productos en la tabla
+    private void cargarProductos() {
+        var productos = productoDAO.obtenerProductos();
+        modeloTabla.setRowCount(0); // Limpiar tabla antes de cargar
+
+        for (String nombreProducto : productos) {
+            modeloTabla.addRow(new Object[]{nombreProducto, "", "", ""});
+        }
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
