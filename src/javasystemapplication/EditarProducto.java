@@ -6,8 +6,7 @@ package javasystemapplication;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.util.Arrays;
 
 /**
  *
@@ -15,70 +14,83 @@ import java.awt.event.ActionListener;
  */
 public class EditarProducto extends javax.swing.JFrame {
 
-    private JTextField txtNombreProducto;
-    private JButton btnGuardar, btnRegresar;
-    private String nombreProductoOriginal;
+    private JTextField txtNombre, txtClase, txtCantidad;
+    private JComboBox<String> cmbUnidadMedida, cmbTipoCantidad;
+    private JButton btnGuardar, btnCancelar;
+    private String nombreOriginal;
+    private ProductoDAO productoDAO = new ProductoDAO();
 
     /**
      * Creates new form EditarProducto
      */
     public EditarProducto(String nombreProducto) {
-        this.nombreProductoOriginal = nombreProducto;
+        this.nombreOriginal = nombreProducto;
 
-        // Configuración de la ventana
         setTitle("Editar Producto");
-        setSize(400, 250);
+        setSize(400, 400);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // Panel principal
-        JPanel panel = new JPanel();
-        panel.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
-        gbc.fill = GridBagConstraints.HORIZONTAL;
+        // 🔹 Panel principal
+        JPanel panelPrincipal = new JPanel(new GridLayout(6, 2, 10, 10));
+        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        // Etiqueta y campo de texto
-        JLabel lblNombre = new JLabel("Nuevo Nombre:");
-        txtNombreProducto = new JTextField(20);
-        txtNombreProducto.setText(nombreProductoOriginal);
+        // 🔹 Campos de texto
+        JLabel lblNombre = new JLabel("Nombre del Producto:");
+        txtNombre = new JTextField();
 
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        panel.add(lblNombre, gbc);
+        JLabel lblClase = new JLabel("Clase:");
+        txtClase = new JTextField();
 
-        gbc.gridx = 1;
-        panel.add(txtNombreProducto, gbc);
+        JLabel lblCantidad = new JLabel("Factor:");
+        txtCantidad = new JTextField();
 
-        // Botones
-        btnGuardar = new JButton("Guardar");
-        btnGuardar.setBackground(new Color(0, 102, 204));
-        btnGuardar.setForeground(Color.WHITE);
-        btnGuardar.setPreferredSize(new Dimension(120, 40));
+        JLabel lblTipoCantidad = new JLabel("Tipo de Cantidad:");
+        String[] tiposCantidad = {"piezas", "litros", "kilos", "metros", "gramos", "unidades"};
+        cmbTipoCantidad = new JComboBox<>(tiposCantidad);
 
-        btnRegresar = new JButton("Regresar");
-        btnRegresar.setBackground(new Color(169, 169, 169));
-        btnRegresar.setForeground(Color.WHITE);
-        btnRegresar.setPreferredSize(new Dimension(120, 40));
+        JLabel lblUnidadMedida = new JLabel("Equivale a:");
+        String[] unidades = {"caja", "paquete", "bolsa", "bote", "tarima", "rollo"};
+        cmbUnidadMedida = new JComboBox<>(unidades);
 
-        // Panel de botones
-        JPanel panelBotones = new JPanel();
+        // 🔹 Añadir componentes al panel principal
+        panelPrincipal.add(lblNombre);
+        panelPrincipal.add(txtNombre);
+        panelPrincipal.add(lblClase);
+        panelPrincipal.add(txtClase);
+        panelPrincipal.add(lblCantidad);
+        panelPrincipal.add(txtCantidad);
+        panelPrincipal.add(lblTipoCantidad);
+        panelPrincipal.add(cmbTipoCantidad);
+        panelPrincipal.add(lblUnidadMedida);
+        panelPrincipal.add(cmbUnidadMedida);
+
+        add(panelPrincipal, BorderLayout.CENTER);
+
+        // 🔹 Botones
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        btnGuardar = new JButton("Guardar Cambios");
+        btnCancelar = new JButton("Cancelar");
+
         panelBotones.add(btnGuardar);
-        panelBotones.add(btnRegresar);
+        panelBotones.add(btnCancelar);
 
-        // Agregar componentes a la ventana
-        add(panel, BorderLayout.CENTER);
         add(panelBotones, BorderLayout.SOUTH);
 
-        // Acción de guardar
-        btnGuardar.addActionListener((ActionEvent e) -> {
-            guardarCambios();
-        });
+        // 🔹 Aplicar estilos
+        aplicarEstilos();
 
-        // Acción de regresar
-        btnRegresar.addActionListener((ActionEvent e) -> {
-            dispose(); // Cierra la ventana sin guardar cambios
+        // 🚀 Cargar datos del producto seleccionado
+        cargarDatosProducto(nombreProducto);
+
+        // 🎯 Evento para guardar cambios
+        btnGuardar.addActionListener(e -> guardarCambios());
+
+        // 🎯 Evento para cancelar
+        btnCancelar.addActionListener(e -> {
+            dispose();
+            new PantallaProductos().setVisible(true);
         });
     }
 
@@ -139,31 +151,97 @@ public class EditarProducto extends javax.swing.JFrame {
             new EditarProducto(null).setVisible(true);
         });
     }
-    
-    private void guardarCambios() {
-        String nuevoNombre = txtNombreProducto.getText().trim();
 
-        if (nuevoNombre.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El nombre del producto no puede estar vacío.", "Error", JOptionPane.ERROR_MESSAGE);
+    /**
+     * Guarda los cambios del producto editado
+     */
+    private void guardarCambios() {
+        String nuevoNombre = txtNombre.getText().trim();
+        String nuevaClase = txtClase.getText().trim();
+        String cantidadStr = txtCantidad.getText().trim();
+        String tipoCantidad = (String) cmbTipoCantidad.getSelectedItem();
+        String unidadMedida = (String) cmbUnidadMedida.getSelectedItem();
+
+        // Validar campos obligatorios
+        if (nuevoNombre.isEmpty() || nuevaClase.isEmpty() || cantidadStr.isEmpty() || tipoCantidad == null || unidadMedida == null) {
+            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Confirmación antes de actualizar el producto
-        int confirmacion = JOptionPane.showConfirmDialog(this, 
-            "¿Seguro que quieres actualizar el producto '" + nombreProductoOriginal + "' a '" + nuevoNombre + "'?",
-            "Confirmar Edición", JOptionPane.YES_NO_OPTION);
+        // Validar que la cantidad sea un número
+        int cantidad;
+        try {
+            cantidad = Integer.parseInt(cantidadStr);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "La cantidad debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 🔥 Formato de conversión -> "12 piezas = 1 caja" o "5 litros = 1 bote"
+        String conversion = cantidad + " " + tipoCantidad.toLowerCase() + " = 1 " + unidadMedida.toLowerCase();
+
+        // Confirmar antes de guardar cambios
+        int confirmacion = JOptionPane.showConfirmDialog(this,
+                "¿Deseas guardar los cambios del producto '" + nuevoNombre + "'?\n"
+                + "Clase: " + nuevaClase + "\n"
+                + "Conversión: " + conversion,
+                "Confirmar Cambios", JOptionPane.YES_NO_OPTION);
 
         if (confirmacion == JOptionPane.YES_OPTION) {
-            boolean actualizado = ProductoDAO.editarProducto(nombreProductoOriginal, nuevoNombre);
+            boolean editado = productoDAO.editarProducto(nombreOriginal, nuevoNombre, nuevaClase, conversion);
 
-            if (actualizado) {
+            if (editado) {
                 JOptionPane.showMessageDialog(this, "Producto actualizado con éxito.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                dispose(); // Cierra la ventana después de actualizar
+                dispose();
                 new PantallaProductos().setVisible(true);
             } else {
                 JOptionPane.showMessageDialog(this, "Error al actualizar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
+    }
+
+/**
+ * Carga los datos actuales del producto en los campos para edición
+ */
+private void cargarDatosProducto(String nombreProducto) {
+    String[] datosProducto = productoDAO.obtenerProductoPorNombre(nombreProducto);
+
+    if (datosProducto != null) {
+        txtNombre.setText(datosProducto[0]); // Nombre
+        txtClase.setText(datosProducto[1]);  // Clase
+        String[] conversion = datosProducto[3].split(" "); // 12 piezas = 1 caja
+        
+        System.out.println(Arrays.toString(conversion));
+        
+        if (conversion.length > 0) {
+            // ✅ Obtener el factor (primer número) y asignarlo a txtCantidad
+            txtCantidad.setText(conversion[0]); // Cantidad (ej. 12)
+            cmbTipoCantidad.setSelectedItem(conversion[1]); // Tipo de cantidad (ej. piezas)
+
+            // Mostrar la unidad de medida correspondiente en el combo de "Equivale a"
+            String unidad = conversion[4]; // Unidad de medida (ej. caja)
+            cmbUnidadMedida.setSelectedItem(unidad); // Selecciona la unidad de medida en el combo
+        } else {
+            // Si la conversión no tiene el formato esperado, manejar el error
+            JOptionPane.showMessageDialog(this, "El formato de conversión es incorrecto.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    } else {
+        JOptionPane.showMessageDialog(null, "Error al cargar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
+    }
+}
+
+    /**
+     * Aplica los estilos a los botones y componentes
+     */
+    private void aplicarEstilos() {
+        Color azul = new Color(0, 102, 204);
+        Color rojo = new Color(204, 0, 0);
+        Color blanco = Color.WHITE;
+
+        btnGuardar.setBackground(azul);
+        btnGuardar.setForeground(blanco);
+        btnCancelar.setBackground(rojo);
+        btnCancelar.setForeground(blanco);
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

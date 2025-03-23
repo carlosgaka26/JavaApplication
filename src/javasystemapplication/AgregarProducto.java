@@ -6,8 +6,6 @@ package javasystemapplication;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-
 
 /**
  *
@@ -15,64 +13,78 @@ import java.awt.event.ActionEvent;
  */
 public class AgregarProducto extends javax.swing.JFrame {
 
-    private JTextField txtNombreProducto;
-    private JButton btnGuardar, btnRegresar;
+    private JTextField txtNombre, txtClase, txtCantidad;
+    private JComboBox<String> cmbUnidadMedida, cmbTipoCantidad;
+    private JButton btnGuardar, btnCancelar;
     private ProductoDAO productoDAO = new ProductoDAO();
 
     /**
      * Creates new form AgregarProducto
      */
     public AgregarProducto() {
-        setTitle("Agregar Producto");
-        setSize(450, 250);
+        setTitle("Agregar Nuevo Producto");
+        setSize(400, 400);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // 🔹 Panel principal para el formulario (GridBagLayout para mejor distribución)
-        JPanel panelFormulario = new JPanel(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 10, 10, 10);
+        // 🔹 Panel principal
+        JPanel panelPrincipal = new JPanel(new GridLayout(6, 2, 10, 10));
+        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
-        JLabel lblNombreProducto = new JLabel("Nombre del Producto:");
-        txtNombreProducto = new JTextField(20);
+        // 🔹 Campos de texto
+        JLabel lblNombre = new JLabel("Nombre del Producto:");
+        txtNombre = new JTextField();
 
-        // Configuración de la posición del label
-        gbc.gridx = 0;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.EAST;
-        panelFormulario.add(lblNombreProducto, gbc);
+        JLabel lblClase = new JLabel("Clase:");
+        txtClase = new JTextField();
 
-        // Configuración de la posición del campo de texto
-        gbc.gridx = 1;
-        gbc.gridy = 0;
-        gbc.anchor = GridBagConstraints.WEST;
-        panelFormulario.add(txtNombreProducto, gbc);
+        JLabel lblCantidad = new JLabel("Factor:");
+        txtCantidad = new JTextField();
 
-        // 🔹 Panel de botones (FlowLayout para centrarlos)
-        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER, 20, 10));
+        JLabel lblTipoCantidad = new JLabel("Tipo de Cantidad:");
+        String[] tiposCantidad = {"Piezas", "Litros", "Kilos", "Metros", "Gramos", "Unidades"};
+        cmbTipoCantidad = new JComboBox<>(tiposCantidad);
+
+        JLabel lblUnidadMedida = new JLabel("Equivale a:");
+        String[] unidades = {"Caja", "Paquete", "Bolsa", "Bote", "Tarima", "Rollo"};
+        cmbUnidadMedida = new JComboBox<>(unidades);
+
+        // 🔹 Añadir componentes al panel principal
+        panelPrincipal.add(lblNombre);
+        panelPrincipal.add(txtNombre);
+        panelPrincipal.add(lblClase);
+        panelPrincipal.add(txtClase);
+        panelPrincipal.add(lblCantidad);
+        panelPrincipal.add(txtCantidad);
+        panelPrincipal.add(lblTipoCantidad);
+        panelPrincipal.add(cmbTipoCantidad);
+        panelPrincipal.add(lblUnidadMedida);
+        panelPrincipal.add(cmbUnidadMedida);
+
+        add(panelPrincipal, BorderLayout.CENTER);
+
+        // 🔹 Botones
+        JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER));
         btnGuardar = new JButton("Guardar");
-        btnRegresar = new JButton("Regresar");
+        btnCancelar = new JButton("Cancelar");
 
-        // Agregar botones al panel
         panelBotones.add(btnGuardar);
-        panelBotones.add(btnRegresar);
+        panelBotones.add(btnCancelar);
 
-        // 🔹 Agregar paneles a la ventana
-        add(panelFormulario, BorderLayout.CENTER);
         add(panelBotones, BorderLayout.SOUTH);
 
-        // 🔹 Eventos de botones
-        btnGuardar.addActionListener((ActionEvent e) -> {
-            confirmarGuardarProducto();
-        });
-
-        btnRegresar.addActionListener((ActionEvent e) -> {
-            dispose(); // Cerrar la ventana actual
-            new PantallaProductos().setVisible(true); // Volver a la pantalla de productos
-        });
-
+        // 🔹 Aplicar estilos
         aplicarEstilos();
+
+        // 🎯 Evento para guardar producto
+        btnGuardar.addActionListener(e -> guardarProducto());
+
+        // 🎯 Evento para cancelar
+        btnCancelar.addActionListener(e -> {
+            dispose();
+            new PantallaProductos().setVisible(true);
+        });
     }
 
     /**
@@ -133,58 +145,59 @@ public class AgregarProducto extends javax.swing.JFrame {
         });
     }
 
-    private void confirmarGuardarProducto() {
-        String nombreProducto = txtNombreProducto.getText().trim();
+    // 🔹 Guardar producto en la base de datos
+    private void guardarProducto() {
+        String nombre = txtNombre.getText().trim();
+        String clase = txtClase.getText().trim();
+        String cantidadStr = txtCantidad.getText().trim();
+        String tipoCantidad = (String) cmbTipoCantidad.getSelectedItem();
+        String unidadMedida = (String) cmbUnidadMedida.getSelectedItem();
 
-        if (nombreProducto.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "El nombre del producto no puede estar vacío.", "Error", JOptionPane.ERROR_MESSAGE);
+        // Validar campos obligatorios
+        if (nombre.isEmpty() || clase.isEmpty() || cantidadStr.isEmpty() || tipoCantidad == null || unidadMedida == null) {
+            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
-        // Mostrar nombre del producto en el cuadro de confirmación
+        // Validar que la cantidad sea un número
+        int cantidad;
+        try {
+            cantidad = Integer.parseInt(cantidadStr);
+        } catch (NumberFormatException e) {
+            JOptionPane.showMessageDialog(this, "La cantidad debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // 🔥 Formato de conversión -> "12 piezas = 1 caja" o "5 litros = 1 bote"
+        String conversion = cantidad + " " + tipoCantidad.toLowerCase() + " = 1 " + unidadMedida.toLowerCase();
+
+        // Confirmar antes de guardar
         int confirmacion = JOptionPane.showConfirmDialog(this,
-                "¿Estás seguro de que deseas guardar el producto: \n" + nombreProducto + "?",
-                "Confirmar", JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE);
+                "¿Deseas guardar el producto '" + nombre + "' con la conversión: " + conversion + "?",
+                "Confirmar Guardado", JOptionPane.YES_NO_OPTION);
 
         if (confirmacion == JOptionPane.YES_OPTION) {
-            boolean exito = productoDAO.agregarProducto(nombreProducto);
-            if (exito) {
-                JOptionPane.showMessageDialog(this, "Producto agregado correctamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-                dispose();
-                new PantallaProductos().setVisible(true);
+            boolean guardado = productoDAO.agregarProducto(nombre, clase, unidadMedida, conversion);
+
+            if (guardado) {
+                JOptionPane.showMessageDialog(this, "Producto agregado con éxito.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+                dispose(); // Cerrar la ventana después de guardar
+                new PantallaProductos().setVisible(true); // Regresar a la pantalla de productos
             } else {
-                JOptionPane.showMessageDialog(this, "Error al guardar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(this, "Error al agregar el producto.", "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
     private void aplicarEstilos() {
-        // Colores más modernos y suaves
         Color azul = new Color(0, 102, 204);
-        Color gris = new Color(169, 169, 169); // Gris suave
+        Color rojo = new Color(204, 0, 0);
         Color blanco = Color.WHITE;
 
-        // Estilo de los botones
         btnGuardar.setBackground(azul);
         btnGuardar.setForeground(blanco);
-        btnGuardar.setFont(new Font("Arial", Font.BOLD, 14));
-        btnGuardar.setPreferredSize(new Dimension(120, 40));
-        btnGuardar.setFocusPainted(false);
-        btnGuardar.setBorder(BorderFactory.createLineBorder(azul, 2));
-
-        btnRegresar.setBackground(gris);
-        btnRegresar.setForeground(blanco);
-        btnRegresar.setFont(new Font("Arial", Font.BOLD, 14));
-        btnRegresar.setPreferredSize(new Dimension(120, 40));
-        btnRegresar.setFocusPainted(false);
-        btnRegresar.setBorder(BorderFactory.createLineBorder(gris, 2));
-
-        // Fondo
-        getContentPane().setBackground(new Color(240, 240, 240));
-
-        // Campo de texto
-        txtNombreProducto.setFont(new Font("Arial", Font.PLAIN, 14));
-        txtNombreProducto.setPreferredSize(new Dimension(200, 30));
+        btnCancelar.setBackground(rojo);
+        btnCancelar.setForeground(blanco);
     }
 
     // Variables declaration - do not modify//GEN-BEGIN:variables

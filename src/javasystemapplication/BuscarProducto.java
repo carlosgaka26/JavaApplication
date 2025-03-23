@@ -10,89 +10,80 @@ import javax.swing.event.DocumentListener;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
-
 /**
  *
  * @author CarlosGalvan
  */
 public class BuscarProducto extends javax.swing.JFrame {
 
-    private JTextField txtBuscar;
-    private JTable tablaProductos;
-    private DefaultTableModel modeloTabla;
+    private JTextField txtBusqueda;
     private JButton btnRegresar;
-    private ProductoDAO productoDAO;
+    private JTable tablaResultados;
+    private DefaultTableModel modeloTabla;
+    private ProductoDAO productoDAO = new ProductoDAO();
 
     /**
      * Creates new form BuscarProducto
      */
     public BuscarProducto() {
-        // Configuración inicial de la ventana
         setTitle("Buscar Producto");
         setSize(600, 400);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // Panel para el campo de búsqueda
-        JPanel panelBusqueda = new JPanel();
-        panelBusqueda.setLayout(new FlowLayout());
-        JLabel lblBuscar = new JLabel("Buscar Producto:");
-        txtBuscar = new JTextField(20);
-        panelBusqueda.add(lblBuscar);
-        panelBusqueda.add(txtBuscar);
+        // 🔹 Panel superior para la búsqueda
+        JPanel panelBusqueda = new JPanel(new FlowLayout());
+        txtBusqueda = new JTextField(20);
+        btnRegresar = new JButton("Regresar");
 
-        // Configurar la tabla para mostrar los productos
+        panelBusqueda.add(new JLabel("Buscar Producto:"));
+        panelBusqueda.add(txtBusqueda);
+        panelBusqueda.add(btnRegresar);
+
+        add(panelBusqueda, BorderLayout.NORTH);
+
+        // 🔹 Modelo para la tabla
         modeloTabla = new DefaultTableModel();
         modeloTabla.addColumn("Nombre Producto");
+        modeloTabla.addColumn("Clase");
+        modeloTabla.addColumn("Unidad Medida");
+        modeloTabla.addColumn("Conversión");
 
-        tablaProductos = new JTable(modeloTabla);
-        JScrollPane scrollPane = new JScrollPane(tablaProductos);
-
-        // Botón para regresar
-        btnRegresar = new JButton("Regresar");
-        btnRegresar.setBackground(new Color(169, 169, 169));
-        btnRegresar.setForeground(Color.WHITE);
-        btnRegresar.setFont(new Font("Arial", Font.BOLD, 14));
-        btnRegresar.setPreferredSize(new Dimension(120, 40));
-        btnRegresar.setFocusPainted(false);
-
-        // Panel para el botón Regresar
-        JPanel panelBotonRegresar = new JPanel();
-        panelBotonRegresar.add(btnRegresar);
-
-        // Añadir los componentes al JFrame
-        add(panelBusqueda, BorderLayout.NORTH);
+        // 🔹 Tabla con resultados de búsqueda
+        tablaResultados = new JTable(modeloTabla);
+        JScrollPane scrollPane = new JScrollPane(tablaResultados);
         add(scrollPane, BorderLayout.CENTER);
-        add(panelBotonRegresar, BorderLayout.SOUTH);
 
-        // Añadir el DocumentListener para la búsqueda en tiempo real
-        txtBuscar.getDocument().addDocumentListener(new DocumentListener() {
+        // 🔹 Aplicar estilos
+        aplicarEstilos();
+
+        // 🎯 Actualizar tabla en tiempo real al escribir
+        txtBusqueda.getDocument().addDocumentListener(new DocumentListener() {
             @Override
             public void insertUpdate(DocumentEvent e) {
-                buscarProducto();
+                buscarProductoEnTiempoReal();
             }
 
             @Override
             public void removeUpdate(DocumentEvent e) {
-                buscarProducto();
+                buscarProductoEnTiempoReal();
             }
 
             @Override
             public void changedUpdate(DocumentEvent e) {
-                buscarProducto();
+                buscarProductoEnTiempoReal();
             }
         });
 
-        // Acción del botón Regresar
+        // 🎯 Evento para regresar a la pantalla anterior
         btnRegresar.addActionListener(e -> {
             dispose();
-            new PantallaProductos().setVisible(true); // Regresa a la pantalla de productos
+            new PantallaProductos().setVisible(true);
         });
 
-        // Cargar los productos al iniciar
-        productoDAO = new ProductoDAO();
-        cargarProductos();
+        // 🚀 Cargar todos los productos al iniciar la pantalla
+        buscarProductoEnTiempoReal();
     }
 
     /**
@@ -158,36 +149,50 @@ public class BuscarProducto extends javax.swing.JFrame {
     // Método para cargar productos desde la base de datos
     private void cargarProductos() {
 
-        List<String> productos = productoDAO.obtenerProductos();
+        List<String[]> productos = productoDAO.obtenerProductos();
 
         // Limpiar la tabla antes de cargar nuevos productos
         modeloTabla.setRowCount(0);
 
         // Llenar la tabla con los productos obtenidos
-        for (String producto : productos) {
+        for (String[] producto : productos) {
             modeloTabla.addRow(new Object[]{producto});
         }
     }
 
-    // Método para buscar productos en tiempo real
-    private void buscarProducto() {
-        String textoBusqueda = txtBuscar.getText().trim().toLowerCase();
+    // 🔹 Método para buscar productos y actualizar tabla en tiempo real
+    private void buscarProductoEnTiempoReal() {
+        String criterio = txtBusqueda.getText().trim();
 
-        // Si el campo de búsqueda está vacío, mostramos todos los productos
-        if (textoBusqueda.isEmpty()) {
-            cargarProductos();
+        // Obtener lista de productos desde el DAO
+        List<String[]> resultados;
+        if (criterio.isEmpty()) {
+            // Si el campo está vacío, mostrar todos los productos
+            resultados = productoDAO.obtenerTodosLosProductos();
         } else {
-            List<String> productos = ProductoDAO.buscarProductos(textoBusqueda);
+            // Si hay texto, buscar productos que coincidan
+            resultados = productoDAO.buscarProducto(criterio);
+        }
 
-            // Limpiar la tabla antes de cargar los resultados
-            modeloTabla.setRowCount(0);
+        // Limpiar tabla antes de mostrar resultados
+        modeloTabla.setRowCount(0);
 
-            // Llenar la tabla con los productos encontrados
-            for (String producto : productos) {
-                modeloTabla.addRow(new Object[]{producto});
-            }
+        // 🔥 Agregar resultados a la tabla
+        for (String[] fila : resultados) {
+            modeloTabla.addRow(fila);
         }
     }
+
+    // 🔹 Método para aplicar estilos
+    private void aplicarEstilos() {
+        Color azul = new Color(0, 102, 204);
+        Color gris = Color.GRAY;
+        Color blanco = Color.WHITE;
+
+        btnRegresar.setBackground(gris);
+        btnRegresar.setForeground(blanco);
+    }
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables

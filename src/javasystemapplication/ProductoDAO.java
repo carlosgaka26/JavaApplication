@@ -21,34 +21,35 @@ public class ProductoDAO {
         }
     }
 
-    // Obtener lista de productos
-    public List<String> obtenerProductos() {
-        List<String> productos = new ArrayList<>();
-        String sql = "SELECT nombre_producto FROM productos";
+    // 🔹 Obtener productos como una lista de String[]
+    public List<String[]> obtenerProductos() {
+        List<String[]> productos = new ArrayList<>();
+        String sql = "SELECT nombre_producto, clase_producto FROM productos";
 
-        try (Connection conn = ConexionBD.obtenerConexion(); Statement stmt = conn.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql); ResultSet rs = ps.executeQuery()) {
 
             while (rs.next()) {
-                productos.add(rs.getString("nombre_producto"));
+                String nombre = rs.getString("nombre_producto");
+                String clase = rs.getString("clase_producto");
+
+                productos.add(new String[]{nombre, clase});
             }
-
         } catch (SQLException e) {
-            System.out.println("Error al obtener productos: " + e.getMessage());
+            e.printStackTrace();
         }
-
         return productos;
     }
 
-    // Editar producto
-    public static boolean editarProducto(String nombreOriginal, String nuevoNombre) {
-        try (Connection conn = ConexionBD.obtenerConexion()) {
-            String query = "UPDATE productos SET nombre_producto = ? WHERE nombre_producto = ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, nuevoNombre);
-            stmt.setString(2, nombreOriginal);
+// 🔹 Editar producto y actualizar en la base de datos
+    public boolean editarProducto(String nombreOriginal, String nuevoNombre, String nuevaClase, String conversion) {
+        String sql = "UPDATE productos SET nombre_producto = ?, clase_producto = ?, conversion = ? WHERE nombre_producto = ?";
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, nuevoNombre);
+            ps.setString(2, nuevaClase);
+            ps.setString(3, conversion);
+            ps.setString(4, nombreOriginal);
 
-            int filasActualizadas = stmt.executeUpdate();
-            return filasActualizadas > 0;
+            return ps.executeUpdate() > 0;
         } catch (SQLException e) {
             e.printStackTrace();
             return false;
@@ -70,42 +71,104 @@ public class ProductoDAO {
         }
     }
 
-    // Buscar producto por nombre
-    public List<String> buscarProducto(String nombreProducto) {
-        List<String> productos = new ArrayList<>();
-        String sql = "SELECT nombre_producto FROM productos WHERE nombre_producto LIKE ?";
+// 🔹 Buscar producto en la base de datos
+    public List<String[]> buscarProducto(String criterio) {
+        List<String[]> listaProductos = new ArrayList<>();
+        String sql = "SELECT nombre_producto, clase_producto, unidad_medida, conversion FROM productos WHERE nombre_producto LIKE ?";
 
-        try (Connection conn = ConexionBD.obtenerConexion(); PreparedStatement stmt = conn.prepareStatement(sql)) {
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
 
-            stmt.setString(1, "%" + nombreProducto + "%");
-            try (ResultSet rs = stmt.executeQuery()) {
-                while (rs.next()) {
-                    productos.add(rs.getString("nombre_producto"));
-                }
+            ps.setString(1, "%" + criterio + "%");
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                String nombre = rs.getString("nombre_producto");
+                String clase = rs.getString("clase_producto");
+                String unidadMedida = rs.getString("unidad_medida");
+                String conversion = rs.getString("conversion");
+
+                // 🔥 Crear un array de strings para agregar a la tabla
+                listaProductos.add(new String[]{nombre, clase, unidadMedida, conversion});
             }
 
         } catch (SQLException e) {
-            System.out.println("Error al buscar producto: " + e.getMessage());
+            e.printStackTrace();
         }
-
-        return productos;
+        return listaProductos;
     }
 
-    // Método para buscar productos por nombre
-    public static List<String> buscarProductos(String nombre) {
-        List<String> productos = new ArrayList<>();
-        try (Connection conn = ConexionBD.obtenerConexion()) {
-            String query = "SELECT nombre_producto FROM productos WHERE nombre_producto LIKE ?";
-            PreparedStatement stmt = conn.prepareStatement(query);
-            stmt.setString(1, "%" + nombre + "%");
-            ResultSet rs = stmt.executeQuery();
+    // 🔹 Agregar producto a la base de datos con conversión
+    public boolean agregarProducto(String nombre, String clase, String unidadMedida, String conversion) {
+        String sql = "INSERT INTO productos (nombre_producto, clase_producto, unidad_medida, conversion) VALUES (?, ?, ?, ?)";
+
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, nombre);
+            ps.setString(2, clase);
+            ps.setString(3, unidadMedida);
+            ps.setString(4, conversion);
+
+            return ps.executeUpdate() > 0; // Retorna true si se insertó correctamente
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    // 🔹 Obtener todos los productos cuando el campo de búsqueda está vacío
+    public List<String[]> obtenerTodosLosProductos() {
+        List<String[]> listaProductos = new ArrayList<>();
+        String sql = "SELECT nombre_producto, clase_producto, unidad_medida, conversion FROM productos";
+
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ResultSet rs = ps.executeQuery();
 
             while (rs.next()) {
-                productos.add(rs.getString("nombre_producto"));
+                String nombre = rs.getString("nombre_producto");
+                String clase = rs.getString("clase_producto");
+                String unidadMedida = rs.getString("unidad_medida");
+                String conversion = rs.getString("conversion");
+
+                listaProductos.add(new String[]{nombre, clase, unidadMedida, conversion});
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return listaProductos;
+    }
+// 🔹 Obtener datos del producto por nombre
+
+    public String[] obtenerProductoPorNombre(String nombreProducto) {
+        String sql = "SELECT nombre_producto, clase_producto, unidad_medida, conversion FROM productos WHERE nombre_producto = ?";
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
+            ps.setString(1, nombreProducto);
+            ResultSet rs = ps.executeQuery();
+
+            if (rs.next()) {
+                String nombre = rs.getString("nombre_producto");
+                String clase = rs.getString("clase_producto");
+                String unidadMedida = rs.getString("unidad_medida");
+                String conversion = rs.getString("conversion");
+                return new String[]{nombre, clase, unidadMedida, conversion};
             }
         } catch (SQLException e) {
             e.printStackTrace();
         }
-        return productos;
+        return null;
+    }
+
+    /**
+     * Obtener el factor desde la conversión
+     */
+    private int obtenerFactorDesdeConversion(String conversion) {
+        try {
+            String[] partes = conversion.split(" ");
+            return Integer.parseInt(partes[0]); // El primer valor es el factor
+        } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+            e.printStackTrace();
+            return -1;
+        }
     }
 }
