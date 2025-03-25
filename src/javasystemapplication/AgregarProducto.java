@@ -22,23 +22,40 @@ public class AgregarProducto extends javax.swing.JFrame {
      * Creates new form AgregarProducto
      */
     public AgregarProducto() {
-        setTitle("Agregar Nuevo Producto");
-        setSize(400, 400);
+               setTitle("Agregar Nuevo Producto");
+        setSize(400, 450);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
 
         // 🔹 Panel principal
-        JPanel panelPrincipal = new JPanel(new GridLayout(6, 2, 10, 10));
-        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        JPanel panelPrincipal = new JPanel(new GridLayout(2, 2, 10, 10));
+        panelPrincipal.setBorder(BorderFactory.createEmptyBorder(20, 20, 10, 20));
 
-        // 🔹 Campos de texto
+        // 🔹 Campos principales
         JLabel lblNombre = new JLabel("Nombre del Producto:");
         txtNombre = new JTextField();
 
         JLabel lblClase = new JLabel("Clase:");
         txtClase = new JTextField();
 
+        // 🔹 Añadir campos principales
+        panelPrincipal.add(lblNombre);
+        panelPrincipal.add(txtNombre);
+        panelPrincipal.add(lblClase);
+        panelPrincipal.add(txtClase);
+
+        add(panelPrincipal, BorderLayout.NORTH);
+
+        // 🔹 Sección de Conversión
+        JPanel panelConversion = new JPanel(new GridLayout(3, 2, 10, 10));
+        panelConversion.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(0, 102, 204)),
+                "Conversión", 0, 0, new Font("Arial", Font.BOLD, 12),
+                new Color(0, 102, 204))
+        );
+
+        // 🔹 Campos de Conversión
         JLabel lblCantidad = new JLabel("Factor:");
         txtCantidad = new JTextField();
 
@@ -50,19 +67,15 @@ public class AgregarProducto extends javax.swing.JFrame {
         String[] unidades = {"Caja", "Paquete", "Bolsa", "Bote", "Tarima", "Rollo"};
         cmbUnidadMedida = new JComboBox<>(unidades);
 
-        // 🔹 Añadir componentes al panel principal
-        panelPrincipal.add(lblNombre);
-        panelPrincipal.add(txtNombre);
-        panelPrincipal.add(lblClase);
-        panelPrincipal.add(txtClase);
-        panelPrincipal.add(lblCantidad);
-        panelPrincipal.add(txtCantidad);
-        panelPrincipal.add(lblTipoCantidad);
-        panelPrincipal.add(cmbTipoCantidad);
-        panelPrincipal.add(lblUnidadMedida);
-        panelPrincipal.add(cmbUnidadMedida);
+        // 🔹 Añadir campos de Conversión
+        panelConversion.add(lblCantidad);
+        panelConversion.add(txtCantidad);
+        panelConversion.add(lblTipoCantidad);
+        panelConversion.add(cmbTipoCantidad);
+        panelConversion.add(lblUnidadMedida);
+        panelConversion.add(cmbUnidadMedida);
 
-        add(panelPrincipal, BorderLayout.CENTER);
+        add(panelConversion, BorderLayout.CENTER);
 
         // 🔹 Botones
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER));
@@ -145,7 +158,6 @@ public class AgregarProducto extends javax.swing.JFrame {
         });
     }
 
-    // 🔹 Guardar producto en la base de datos
     private void guardarProducto() {
         String nombre = txtNombre.getText().trim();
         String clase = txtClase.getText().trim();
@@ -159,12 +171,12 @@ public class AgregarProducto extends javax.swing.JFrame {
             return;
         }
 
-        // Validar que la cantidad sea un número
+        // Validar que la cantidad sea un número válido
         int cantidad;
         try {
             cantidad = Integer.parseInt(cantidadStr);
         } catch (NumberFormatException e) {
-            JOptionPane.showMessageDialog(this, "La cantidad debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(this, "El factor debe ser un número válido.", "Error", JOptionPane.ERROR_MESSAGE);
             return;
         }
 
@@ -189,6 +201,9 @@ public class AgregarProducto extends javax.swing.JFrame {
         }
     }
 
+    /**
+     * Aplica los estilos a los botones y componentes
+     */
     private void aplicarEstilos() {
         Color azul = new Color(0, 102, 204);
         Color rojo = new Color(204, 0, 0);

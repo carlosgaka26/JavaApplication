@@ -114,7 +114,12 @@ public class PantallaProductos extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(null, "Selecciona un producto para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             }
         });
-
+        
+        btnAlta.addActionListener(e -> {
+            dispose();
+            new AltaProducto().setVisible(true);
+        });
+        
         btnRegresar.addActionListener(e -> {
             dispose();
             new MenuPrincipal().setVisible(true);
