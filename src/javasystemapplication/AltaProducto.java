@@ -6,12 +6,12 @@ package javasystemapplication;
 
 import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
-import javax.swing.table.TableCellEditor;
 import java.awt.*;
-import java.util.List;
+import java.awt.event.*;
 import java.util.ArrayList;
-import java.util.EventObject;
-import javax.swing.event.CellEditorListener;
+import java.util.List;
+import javax.swing.table.TableColumnModel;
+
 /**
  *
  * @author CarlosGalvan
@@ -20,7 +20,8 @@ public class AltaProducto extends javax.swing.JFrame {
 
     private JTable tablaProductos;
     private DefaultTableModel modeloTabla;
-    private JButton btnGuardar, btnCancelar;
+    private JButton btnGuardar, btnCancelar, btnAgregarFila;
+    private JTextArea txtObservaciones; // 🔹 Agregado para Observaciones
 
     private ClienteDAO clienteDAO = new ClienteDAO();
     private AlmacenDAO almacenDAO = new AlmacenDAO();
@@ -30,104 +31,79 @@ public class AltaProducto extends javax.swing.JFrame {
      * Creates new form AltaProducto
      */
     public AltaProducto() {
-         setTitle("Alta de Productos");
-        setSize(800, 600);
+          setTitle("Alta de Productos");
+        setSize(1100, 600); // Aumentamos la altura para incluir observaciones
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
+        setLayout(new BorderLayout());
 
-        // 🔹 Crear el modelo de la tabla
-        String[] columnas = {"Cliente", "Almacén", "Producto", "Unidad de Medida", "Lote", "Presentación", "Observaciones"};
-        modeloTabla = new DefaultTableModel(null, columnas);
+        // 🔹 Crear tabla para ingresar productos
+        String[] columnas = {"Cliente", "Almacén", "Producto", "Unidad de Medida", "Cantidad", "Presentación", "Lote"};
+        modeloTabla = new DefaultTableModel(columnas, 0) {
+            @Override
+            public boolean isCellEditable(int row, int column) {
+                return true; // Permitir edición en todas las celdas
+            }
+        };
 
-        // 🔹 Crear la tabla con el modelo
         tablaProductos = new JTable(modeloTabla);
-        tablaProductos.setSelectionMode(ListSelectionModel.SINGLE_SELECTION);
         JScrollPane scrollPane = new JScrollPane(tablaProductos);
+        add(scrollPane, BorderLayout.CENTER);
 
-        // 🔹 Panel para la tabla
-        JPanel panelTabla = new JPanel();
-        panelTabla.setLayout(new BorderLayout());
-        panelTabla.add(scrollPane, BorderLayout.CENTER);
+        // 🔹 Configurar editores para las columnas desplegables
+        tablaProductos.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarClientes())));
+        tablaProductos.getColumnModel().getColumn(1).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarAlmacenes())));
+        tablaProductos.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarProductos())));
+        tablaProductos.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarUnidadesMedida())));
+        tablaProductos.getColumnModel().getColumn(4).setCellEditor(crearEditorNumerico()); // ✅ Cantidad
+        tablaProductos.getColumnModel().getColumn(5).setCellEditor(new DefaultCellEditor(new JTextField())); // Presentación
+        tablaProductos.getColumnModel().getColumn(6).setCellEditor(new DefaultCellEditor(new JTextField())); // Lote
 
-        // 🔹 Botones para agregar y guardar productos
+        tablaProductos.setRowHeight(35);
+
+        // 🔹 Panel para Observaciones
+        JPanel panelObservaciones = new JPanel(new BorderLayout());
+        JLabel lblObservaciones = new JLabel("Observaciones:");
+        txtObservaciones = new JTextArea(5, 50); // 5 filas, ancho proporcional
+        txtObservaciones.setLineWrap(true);
+        txtObservaciones.setWrapStyleWord(true);
+
+        JScrollPane scrollObservaciones = new JScrollPane(txtObservaciones);
+        scrollObservaciones.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
+
+        // 🔹 Añadir etiqueta y cuadro de texto para observaciones
+        panelObservaciones.add(lblObservaciones, BorderLayout.NORTH);
+        panelObservaciones.add(scrollObservaciones, BorderLayout.CENTER);
+
+        // 🔹 Botones
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        btnAgregarFila = new JButton("Agregar Fila");
         btnGuardar = new JButton("Guardar");
         btnCancelar = new JButton("Cancelar");
-        JButton btnAgregarFila = new JButton("Agregar Fila");
 
         panelBotones.add(btnAgregarFila);
         panelBotones.add(btnGuardar);
         panelBotones.add(btnCancelar);
 
-        // 🔹 Panel principal
-        setLayout(new BorderLayout());
-        add(panelTabla, BorderLayout.CENTER);
-        add(panelBotones, BorderLayout.SOUTH);
-
-        // 🔹 Aplicar estilos
+        // 🔥 Estilos de botones
         aplicarEstilos();
 
-        // 🎯 Eventos de botones
+        // 🎯 Evento para agregar fila
         btnAgregarFila.addActionListener(e -> agregarFila());
-//        btnGuardar.addActionListener(e -> guardarProductos());
+
+        // 🎯 Evento para cancelar
         btnCancelar.addActionListener(e -> {
             dispose();
             new PantallaProductos().setVisible(true);
         });
 
-        // 🔹 Establecer editores de celdas para las columnas "Cliente", "Almacén" y "Producto"
-        tablaProductos.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarClientes())));
-        tablaProductos.getColumnModel().getColumn(1).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarAlmacenes())));
-        tablaProductos.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarProductos())));
+        // 🔹 Añadir componentes a la ventana
+        JPanel panelCentral = new JPanel(new BorderLayout());
+        panelCentral.add(scrollPane, BorderLayout.CENTER);
+        panelCentral.add(panelObservaciones, BorderLayout.SOUTH); // Observaciones debajo de la tabla
 
-        // 🔹 Detectar clic en la columna de "Observaciones"
-        tablaProductos.getColumnModel().getColumn(6).setCellEditor(new TableCellEditor() {
-            JTextArea textArea = new JTextArea(5, 20);
-
-            @Override
-            public Component getTableCellEditorComponent(JTable table, Object value, boolean isSelected, int row, int column) {
-                // Cuando se hace clic en la celda, mostrar un cuadro de texto más grande para las observaciones
-                String observaciones = (String) value;
-                textArea.setText(observaciones != null ? observaciones : "");
-                textArea.setCaretPosition(textArea.getText().length());
-                return new JScrollPane(textArea);
-            }
-
-            @Override
-            public Object getCellEditorValue() {
-                return textArea.getText(); // Devolver el texto escrito
-            }
-
-            @Override
-            public boolean isCellEditable(EventObject anEvent) {
-                return true;
-            }
-
-            @Override
-            public boolean shouldSelectCell(EventObject anEvent) {
-                return true;
-            }
-
-            @Override
-            public boolean stopCellEditing() {
-                return true;
-            }
-
-            @Override
-            public void cancelCellEditing() {
-                textArea.setText(""); // Cancelar la edición si es necesario
-            }
-
-             @Override
-             public void addCellEditorListener(CellEditorListener l) {
-                 throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-             }
-
-             @Override
-             public void removeCellEditorListener(CellEditorListener l) {
-                 throw new UnsupportedOperationException("Not supported yet."); // Generated from nbfs://nbhost/SystemFileSystem/Templates/Classes/Code/GeneratedMethodBody
-             }
-        });
+        add(panelCentral, BorderLayout.CENTER);
+        add(panelBotones, BorderLayout.SOUTH);
     }
 
     /**
@@ -234,6 +210,46 @@ public class AltaProducto extends javax.swing.JFrame {
     private void agregarFila() {
         modeloTabla.addRow(new Object[]{"", "", "", "", "", "", ""});
     }
+
+    private String[] cargarUnidadesMedida() {
+        String[] unidadesMedida = {"Caja", "Paquete", "Bolsa", "Bote", "Tarima", "Rollo"};
+        return unidadesMedida;
+    }
+
+    // 🔹 Crear editor para cantidad (solo números)
+    private DefaultCellEditor crearEditorNumerico() {
+        JTextField txtCantidad = new JTextField();
+        txtCantidad.setHorizontalAlignment(JTextField.RIGHT);
+
+        txtCantidad.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyTyped(KeyEvent evt) {
+                char c = evt.getKeyChar();
+                if (!Character.isDigit(c) && c != '\b') {
+                    evt.consume(); // Evitar caracteres no numéricos
+                }
+            }
+        });
+
+        return new DefaultCellEditor(txtCantidad);
+    }
+
+    
+    private void ajustarTamanioColumnas() {
+    TableColumnModel columnModel = tablaProductos.getColumnModel();
+    
+    // Ajustar ancho de columnas específicas
+    columnModel.getColumn(0).setPreferredWidth(150); // Cliente
+    columnModel.getColumn(1).setPreferredWidth(150); // Almacén
+    columnModel.getColumn(2).setPreferredWidth(150); // Producto
+    columnModel.getColumn(3).setPreferredWidth(100); // Cantidad
+    columnModel.getColumn(4).setPreferredWidth(150); // Unidad de Medida
+    columnModel.getColumn(5).setPreferredWidth(150); // Presentación
+    columnModel.getColumn(6).setPreferredWidth(250); // Observaciones
+    columnModel.getColumn(7).setPreferredWidth(120); // Lote
+}
+    
+
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
 }
