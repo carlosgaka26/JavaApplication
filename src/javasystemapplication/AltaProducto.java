@@ -26,12 +26,13 @@ public class AltaProducto extends javax.swing.JFrame {
     private ClienteDAO clienteDAO = new ClienteDAO();
     private AlmacenDAO almacenDAO = new AlmacenDAO();
     private ProductoDAO productoDAO = new ProductoDAO();
+    private InventarioDAO inventarioDAO = new InventarioDAO();
 
     /**
      * Creates new form AltaProducto
      */
     public AltaProducto() {
-          setTitle("Alta de Productos");
+        setTitle("Alta de Productos");
         setSize(1100, 600); // Aumentamos la altura para incluir observaciones
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -95,6 +96,10 @@ public class AltaProducto extends javax.swing.JFrame {
         btnCancelar.addActionListener(e -> {
             dispose();
             new PantallaProductos().setVisible(true);
+        });
+        
+        btnGuardar.addActionListener(e -> {
+            guardarProductos();
         });
 
         // 🔹 Añadir componentes a la ventana
@@ -166,6 +171,58 @@ public class AltaProducto extends javax.swing.JFrame {
         });
     }
 
+private void guardarProductos() {
+    int filas = modeloTabla.getRowCount();
+    List<Inventario> listaInventario = new ArrayList<>();
+
+    for (int i = 0; i < filas; i++) {
+        String clienteNombre = (String) modeloTabla.getValueAt(i, 0);
+        String almacenNombre = (String) modeloTabla.getValueAt(i, 1);
+        String productoNombre = (String) modeloTabla.getValueAt(i, 2);
+        String unidadMedida = (String) modeloTabla.getValueAt(i, 3);
+        int cantidad = Integer.parseInt(modeloTabla.getValueAt(i, 4).toString());
+        String presentacionProducto = (String) modeloTabla.getValueAt(i, 5);
+        String loteProducto = (String) modeloTabla.getValueAt(i, 6);
+        String observaciones = txtObservaciones.getText().trim();
+
+        // Verificar si hay datos vacíos
+        if (clienteNombre == null || almacenNombre == null || productoNombre == null || unidadMedida == null ||
+                loteProducto.isEmpty() || presentacionProducto.isEmpty()) {
+            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios para cada producto.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        // Agregar producto a la lista
+        listaInventario.add(new Inventario(clienteNombre, almacenNombre, productoNombre, unidadMedida, cantidad, presentacionProducto, loteProducto, observaciones));
+    }
+
+    // 🟢 Mostrar confirmación con tabla antes de guardar
+    if (!mostrarConfirmacion(listaInventario)) {
+        JOptionPane.showMessageDialog(this, "Operación cancelada.", "Cancelar", JOptionPane.INFORMATION_MESSAGE);
+        return; // Si el usuario cancela, no se guarda nada
+    }
+
+    // 🔥 Verificar si algún lote ya existe antes de guardar
+    for (Inventario inv : listaInventario) {
+        if (inventarioDAO.loteExiste(inv.getLoteProducto())) {
+            JOptionPane.showMessageDialog(this, "Error: El lote '" + inv.getLoteProducto() + "' ya existe. Verifica los datos.", "Error", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+    }
+
+    // 🚀 Guardar productos si todo está correcto
+    boolean guardadoExitoso = inventarioDAO.agregarProductos(listaInventario);
+
+    if (guardadoExitoso) {
+        JOptionPane.showMessageDialog(this, "Productos guardados exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+        dispose(); // Cerrar la ventana después de guardar
+        new PantallaProductos().setVisible(true);
+    } else {
+        JOptionPane.showMessageDialog(this, "Error al guardar los productos.", "Error", JOptionPane.ERROR_MESSAGE);
+    }
+}
+
+
     private void aplicarEstilos() {
         Color azul = new Color(0, 102, 204);
         Color rojo = new Color(204, 0, 0);
@@ -234,21 +291,57 @@ public class AltaProducto extends javax.swing.JFrame {
         return new DefaultCellEditor(txtCantidad);
     }
 
-    
     private void ajustarTamanioColumnas() {
-    TableColumnModel columnModel = tablaProductos.getColumnModel();
+        TableColumnModel columnModel = tablaProductos.getColumnModel();
+
+        // Ajustar ancho de columnas específicas
+        columnModel.getColumn(0).setPreferredWidth(150); // Cliente
+        columnModel.getColumn(1).setPreferredWidth(150); // Almacén
+        columnModel.getColumn(2).setPreferredWidth(150); // Producto
+        columnModel.getColumn(3).setPreferredWidth(100); // Cantidad
+        columnModel.getColumn(4).setPreferredWidth(150); // Unidad de Medida
+        columnModel.getColumn(5).setPreferredWidth(150); // Presentación
+        columnModel.getColumn(6).setPreferredWidth(250); // Observaciones
+        columnModel.getColumn(7).setPreferredWidth(120); // Lote
+    }
     
-    // Ajustar ancho de columnas específicas
-    columnModel.getColumn(0).setPreferredWidth(150); // Cliente
-    columnModel.getColumn(1).setPreferredWidth(150); // Almacén
-    columnModel.getColumn(2).setPreferredWidth(150); // Producto
-    columnModel.getColumn(3).setPreferredWidth(100); // Cantidad
-    columnModel.getColumn(4).setPreferredWidth(150); // Unidad de Medida
-    columnModel.getColumn(5).setPreferredWidth(150); // Presentación
-    columnModel.getColumn(6).setPreferredWidth(250); // Observaciones
-    columnModel.getColumn(7).setPreferredWidth(120); // Lote
+    private boolean mostrarConfirmacion(List<Inventario> listaInventario) {
+    String[] columnas = {"Cliente", "Almacén", "Producto", "Unidad de Medida", "Cantidad", "Presentación", "Lote", "Observaciones"};
+    Object[][] datos = new Object[listaInventario.size()][8];
+
+    // 🔹 Llenar los datos para la tabla
+    for (int i = 0; i < listaInventario.size(); i++) {
+        Inventario inv = listaInventario.get(i);
+        datos[i][0] = inv.getClienteNombre();
+        datos[i][1] = inv.getAlmacenNombre();
+        datos[i][2] = inv.getProductoNombre();
+        datos[i][3] = inv.getUnidadMedida();
+        datos[i][4] = inv.getCantidad();
+        datos[i][5] = inv.getPresentacionProducto();
+        datos[i][6] = inv.getLoteProducto();
+        datos[i][7] = inv.getObservaciones();
+    }
+
+    // 🔥 Crear la tabla para mostrar confirmación
+    JTable tablaConfirmacion = new JTable(datos, columnas);
+    tablaConfirmacion.setEnabled(false); // No editable
+    tablaConfirmacion.setRowHeight(25);
+    JScrollPane scrollPane = new JScrollPane(tablaConfirmacion);
+    scrollPane.setPreferredSize(new Dimension(800, 300));
+
+    // 🔹 Mostrar tabla en un JOptionPane
+    int confirmacion = JOptionPane.showConfirmDialog(
+            this,
+            scrollPane,
+            "Confirmar datos antes de guardar",
+            JOptionPane.YES_NO_OPTION,
+            JOptionPane.QUESTION_MESSAGE
+    );
+
+    return confirmacion == JOptionPane.YES_OPTION;
 }
-    
+
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
