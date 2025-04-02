@@ -173,4 +173,42 @@ public class InventarioDAO {
         }
     }
 
+    public boolean actualizarTotales(String nombreAlmacen, String nombreCliente, String nombreProducto, String presentacion, int cantidad) {
+        String sqlVerificar = "SELECT total FROM totales WHERE nombre_almacen = ? AND nombre_cliente = ? AND nombre_producto = ? AND presentacion_producto = ?";
+        String sqlInsertar = "INSERT INTO totales (nombre_almacen, nombre_cliente, nombre_producto, presentacion_producto, total) VALUES (?, ?, ?, ?, ?)";
+        String sqlActualizar = "UPDATE totales SET total = total + ? WHERE nombre_almacen = ? AND nombre_cliente = ? AND nombre_producto = ? AND presentacion_producto = ?";
+
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement stmtVerificar = con.prepareStatement(sqlVerificar); PreparedStatement stmtInsertar = con.prepareStatement(sqlInsertar); PreparedStatement stmtActualizar = con.prepareStatement(sqlActualizar)) {
+
+            // Verificar si el producto ya existe en la tabla totales
+            stmtVerificar.setString(1, nombreAlmacen);
+            stmtVerificar.setString(2, nombreCliente);
+            stmtVerificar.setString(3, nombreProducto);
+            stmtVerificar.setString(4, presentacion);
+            ResultSet rs = stmtVerificar.executeQuery();
+
+            if (rs.next()) {
+                // Producto ya existe, actualizar total
+                stmtActualizar.setInt(1, cantidad);
+                stmtActualizar.setString(2, nombreAlmacen);
+                stmtActualizar.setString(3, nombreCliente);
+                stmtActualizar.setString(4, nombreProducto);
+                stmtActualizar.setString(5, presentacion);
+                stmtActualizar.executeUpdate();
+            } else {
+                // Producto no existe, insertarlo
+                stmtInsertar.setString(1, nombreAlmacen);
+                stmtInsertar.setString(2, nombreCliente);
+                stmtInsertar.setString(3, nombreProducto);
+                stmtInsertar.setString(4, presentacion);
+                stmtInsertar.setInt(5, cantidad);
+                stmtInsertar.executeUpdate();
+            }
+            return true;
+        } catch (SQLException e) {
+            e.printStackTrace();
+            return false;
+        }
+    }
+
 }

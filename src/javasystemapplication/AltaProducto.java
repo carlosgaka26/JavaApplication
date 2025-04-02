@@ -196,10 +196,10 @@ private void guardarProductos() {
         listaInventario.add(new Inventario(clienteNombre, almacenNombre, productoNombre, unidadMedida, cantidad, presentacionProducto, loteProducto, observaciones));
     }
 
-    // 🟢 Mostrar confirmación con tabla antes de guardar
+    // 🟢 Mostrar confirmación antes de guardar
     if (!mostrarConfirmacion(listaInventario)) {
         JOptionPane.showMessageDialog(this, "Operación cancelada.", "Cancelar", JOptionPane.INFORMATION_MESSAGE);
-        return; // Si el usuario cancela, no se guarda nada
+        return;
     }
 
     // 🔥 Verificar si algún lote ya existe antes de guardar
@@ -210,10 +210,21 @@ private void guardarProductos() {
         }
     }
 
-    // 🚀 Guardar productos si todo está correcto
+    // 🚀 Guardar productos en inventario
     boolean guardadoExitoso = inventarioDAO.agregarProductos(listaInventario);
 
     if (guardadoExitoso) {
+        // 🔄 También actualizar la tabla `totales`
+        for (Inventario inv : listaInventario) {
+            inventarioDAO.actualizarTotales(
+                inv.getAlmacenNombre(),
+                inv.getClienteNombre(),
+                inv.getProductoNombre(),
+                inv.getPresentacionProducto(),
+                inv.getCantidad()
+            );
+        }
+
         JOptionPane.showMessageDialog(this, "Productos guardados exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
         dispose(); // Cerrar la ventana después de guardar
         new PantallaProductos().setVisible(true);
