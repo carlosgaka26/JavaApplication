@@ -211,4 +211,26 @@ public class InventarioDAO {
         }
     }
 
+    public List<String[]> obtenerTotales() {
+        List<String[]> totales = new ArrayList<>();
+        String sql = "SELECT nombre_almacen, nombre_cliente, nombre_producto, presentacion_producto, total FROM totales";
+
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement stmt = con.prepareStatement(sql); ResultSet rs = stmt.executeQuery()) {
+
+            while (rs.next()) {
+                String nombreAlmacen = rs.getString("nombre_almacen");
+                String nombreCliente = rs.getString("nombre_cliente");
+                String nombreProducto = rs.getString("nombre_producto");
+                String presentacion = rs.getString("presentacion_producto");
+                String total = rs.getString("total");
+
+                totales.add(new String[]{nombreAlmacen, nombreCliente, nombreProducto, presentacion, total});
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return totales;
+    }
+
 }

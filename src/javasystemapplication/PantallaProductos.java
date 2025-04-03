@@ -8,7 +8,6 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
-
 /**
  *
  * @author CarlosGalvan
@@ -24,7 +23,7 @@ public class PantallaProductos extends javax.swing.JFrame {
      * Creates new form PantallaProductos
      */
     public PantallaProductos() {
-        setTitle("Gestión de Productos");
+         setTitle("Gestión de Productos");
         setSize(800, 500);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
@@ -39,7 +38,7 @@ public class PantallaProductos extends javax.swing.JFrame {
         tablaProductos = new JTable(modeloTabla);
         JScrollPane scrollPane = new JScrollPane(tablaProductos);
 
-        // 🔹 Panel inferior (botones de acción)
+        // 🔹 Panel Inferior (Botones de Acción)
         JPanel panelInferior = new JPanel(new FlowLayout());
         btnAgregar = new JButton("Agregar Producto");
         btnBuscar = new JButton("Buscar");
@@ -52,9 +51,10 @@ public class PantallaProductos extends javax.swing.JFrame {
         panelInferior.add(btnBuscar);
         panelInferior.add(btnEditar);
         panelInferior.add(btnEliminar);
+        panelInferior.add(btnInventario); // 🔹 Se agregó correctamente aquí
         panelInferior.add(btnRegresar);
 
-        // 🔹 Panel superior (Alta y Baja)
+        // 🔹 Panel Superior (Alta y Baja)
         JPanel panelSuperior = new JPanel(new FlowLayout(FlowLayout.CENTER));
         btnAlta = new JButton("Alta");
         btnBaja = new JButton("Baja");
@@ -114,12 +114,21 @@ public class PantallaProductos extends javax.swing.JFrame {
                 JOptionPane.showMessageDialog(null, "Selecciona un producto para eliminar.", "Advertencia", JOptionPane.WARNING_MESSAGE);
             }
         });
-        
+
         btnAlta.addActionListener(e -> {
             dispose();
             new AltaProducto().setVisible(true);
         });
-        
+
+        btnBaja.addActionListener(e -> {
+            JOptionPane.showMessageDialog(null, "Funcionalidad de Baja aún no implementada.", "Info", JOptionPane.INFORMATION_MESSAGE);
+        });
+
+        btnInventario.addActionListener(e -> {
+            dispose();
+            new PantallaInventario().setVisible(true); // 📌 Se agregó correctamente aquí
+        });
+
         btnRegresar.addActionListener(e -> {
             dispose();
             new MenuPrincipal().setVisible(true);
@@ -220,6 +229,7 @@ public class PantallaProductos extends javax.swing.JFrame {
             modeloTabla.addRow(producto);
         }
     }
+
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
     // End of variables declaration//GEN-END:variables
