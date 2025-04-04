@@ -20,30 +20,34 @@ public class AltaProducto extends javax.swing.JFrame {
 
     private JTable tablaProductos;
     private DefaultTableModel modeloTabla;
-    private JButton btnGuardar, btnCancelar, btnAgregarFila;
-    private JTextArea txtObservaciones; // 🔹 Agregado para Observaciones
+    private JButton btnGuardar, btnCancelar, btnAgregarFila, btnRestablecerCliente;
+    private JTextArea txtObservaciones;
 
     private ClienteDAO clienteDAO = new ClienteDAO();
     private AlmacenDAO almacenDAO = new AlmacenDAO();
     private ProductoDAO productoDAO = new ProductoDAO();
     private InventarioDAO inventarioDAO = new InventarioDAO();
 
+    private String clienteSeleccionado = null;
+
     /**
      * Creates new form AltaProducto
      */
     public AltaProducto() {
         setTitle("Alta de Productos");
-        setSize(1100, 600); // Aumentamos la altura para incluir observaciones
+        setSize(1100, 600);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.DISPOSE_ON_CLOSE);
         setLayout(new BorderLayout());
 
-        // 🔹 Crear tabla para ingresar productos
         String[] columnas = {"Cliente", "Almacén", "Producto", "Unidad de Medida", "Cantidad", "Presentación", "Lote"};
         modeloTabla = new DefaultTableModel(columnas, 0) {
             @Override
             public boolean isCellEditable(int row, int column) {
-                return true; // Permitir edición en todas las celdas
+                if (column == 0 && clienteSeleccionado != null) {
+                    return false;
+                }
+                return true;
             }
         };
 
@@ -51,61 +55,54 @@ public class AltaProducto extends javax.swing.JFrame {
         JScrollPane scrollPane = new JScrollPane(tablaProductos);
         add(scrollPane, BorderLayout.CENTER);
 
-        // 🔹 Configurar editores para las columnas desplegables
-        tablaProductos.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarClientes())));
         tablaProductos.getColumnModel().getColumn(1).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarAlmacenes())));
         tablaProductos.getColumnModel().getColumn(2).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarProductos())));
         tablaProductos.getColumnModel().getColumn(3).setCellEditor(new DefaultCellEditor(new JComboBox<>(cargarUnidadesMedida())));
-        tablaProductos.getColumnModel().getColumn(4).setCellEditor(crearEditorNumerico()); // ✅ Cantidad
-        tablaProductos.getColumnModel().getColumn(5).setCellEditor(new DefaultCellEditor(new JTextField())); // Presentación
-        tablaProductos.getColumnModel().getColumn(6).setCellEditor(new DefaultCellEditor(new JTextField())); // Lote
-
+        tablaProductos.getColumnModel().getColumn(4).setCellEditor(crearEditorNumerico());
+        tablaProductos.getColumnModel().getColumn(5).setCellEditor(new DefaultCellEditor(new JTextField()));
+        tablaProductos.getColumnModel().getColumn(6).setCellEditor(new DefaultCellEditor(new JTextField()));
         tablaProductos.setRowHeight(35);
 
-        // 🔹 Panel para Observaciones
+        // 🔸 Observaciones
         JPanel panelObservaciones = new JPanel(new BorderLayout());
         JLabel lblObservaciones = new JLabel("Observaciones:");
-        txtObservaciones = new JTextArea(5, 50); // 5 filas, ancho proporcional
+        txtObservaciones = new JTextArea(5, 50);
         txtObservaciones.setLineWrap(true);
         txtObservaciones.setWrapStyleWord(true);
-
         JScrollPane scrollObservaciones = new JScrollPane(txtObservaciones);
         scrollObservaciones.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_ALWAYS);
-
-        // 🔹 Añadir etiqueta y cuadro de texto para observaciones
         panelObservaciones.add(lblObservaciones, BorderLayout.NORTH);
         panelObservaciones.add(scrollObservaciones, BorderLayout.CENTER);
 
-        // 🔹 Botones
+        // 🔸 Botones
         JPanel panelBotones = new JPanel(new FlowLayout(FlowLayout.CENTER));
         btnAgregarFila = new JButton("Agregar Fila");
         btnGuardar = new JButton("Guardar");
         btnCancelar = new JButton("Cancelar");
+        btnRestablecerCliente = new JButton("Restablecer Cliente"); // 🔹 Nuevo botón
 
         panelBotones.add(btnAgregarFila);
+        panelBotones.add(btnRestablecerCliente); // 🔹 Agregado
         panelBotones.add(btnGuardar);
         panelBotones.add(btnCancelar);
 
-        // 🔥 Estilos de botones
         aplicarEstilos();
 
-        // 🎯 Evento para agregar fila
         btnAgregarFila.addActionListener(e -> agregarFila());
-
-        // 🎯 Evento para cancelar
         btnCancelar.addActionListener(e -> {
             dispose();
             new PantallaProductos().setVisible(true);
         });
-        
-        btnGuardar.addActionListener(e -> {
-            guardarProductos();
+        btnGuardar.addActionListener(e -> guardarProductos());
+
+        btnRestablecerCliente.addActionListener(e -> {
+            clienteSeleccionado = null;
+            JOptionPane.showMessageDialog(this, "Cliente restablecido. Podrás seleccionarlo en la siguiente fila.", "Cliente Restablecido", JOptionPane.INFORMATION_MESSAGE);
         });
 
-        // 🔹 Añadir componentes a la ventana
         JPanel panelCentral = new JPanel(new BorderLayout());
         panelCentral.add(scrollPane, BorderLayout.CENTER);
-        panelCentral.add(panelObservaciones, BorderLayout.SOUTH); // Observaciones debajo de la tabla
+        panelCentral.add(panelObservaciones, BorderLayout.SOUTH);
 
         add(panelCentral, BorderLayout.CENTER);
         add(panelBotones, BorderLayout.SOUTH);
@@ -171,68 +168,68 @@ public class AltaProducto extends javax.swing.JFrame {
         });
     }
 
-private void guardarProductos() {
-    int filas = modeloTabla.getRowCount();
-    List<Inventario> listaInventario = new ArrayList<>();
+    private void guardarProductos() {
+        int filas = modeloTabla.getRowCount();
+        List<Inventario> listaInventario = new ArrayList<>();
 
-    for (int i = 0; i < filas; i++) {
-        String clienteNombre = (String) modeloTabla.getValueAt(i, 0);
-        String almacenNombre = (String) modeloTabla.getValueAt(i, 1);
-        String productoNombre = (String) modeloTabla.getValueAt(i, 2);
-        String unidadMedida = (String) modeloTabla.getValueAt(i, 3);
-        int cantidad = Integer.parseInt(modeloTabla.getValueAt(i, 4).toString());
-        String presentacionProducto = (String) modeloTabla.getValueAt(i, 5);
-        String loteProducto = (String) modeloTabla.getValueAt(i, 6);
-        String observaciones = txtObservaciones.getText().trim();
+        for (int i = 0; i < filas; i++) {
+            String clienteNombre = (String) modeloTabla.getValueAt(i, 0);
+            String almacenNombre = (String) modeloTabla.getValueAt(i, 1);
+            String productoNombre = (String) modeloTabla.getValueAt(i, 2);
+            String unidadMedida = (String) modeloTabla.getValueAt(i, 3);
+            int cantidad = Integer.parseInt(modeloTabla.getValueAt(i, 4).toString());
+            String presentacionProducto = (String) modeloTabla.getValueAt(i, 5);
+            String loteProducto = (String) modeloTabla.getValueAt(i, 6);
+            String observaciones = txtObservaciones.getText().trim();
 
-        // Verificar si hay datos vacíos
-        if (clienteNombre == null || almacenNombre == null || productoNombre == null || unidadMedida == null ||
-                loteProducto.isEmpty() || presentacionProducto.isEmpty()) {
-            JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios para cada producto.", "Error", JOptionPane.ERROR_MESSAGE);
+            // Verificar si hay datos vacíos
+            if (clienteNombre == null || almacenNombre == null || productoNombre == null || unidadMedida == null
+                    || loteProducto.isEmpty() || presentacionProducto.isEmpty()) {
+                JOptionPane.showMessageDialog(this, "Todos los campos son obligatorios para cada producto.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
+
+            // Agregar producto a la lista
+            listaInventario.add(new Inventario(clienteNombre, almacenNombre, productoNombre, unidadMedida, cantidad, presentacionProducto, loteProducto, observaciones));
+        }
+
+        // 🟢 Mostrar confirmación antes de guardar
+        if (!mostrarConfirmacion(listaInventario)) {
+            JOptionPane.showMessageDialog(this, "Operación cancelada.", "Cancelar", JOptionPane.INFORMATION_MESSAGE);
             return;
         }
 
-        // Agregar producto a la lista
-        listaInventario.add(new Inventario(clienteNombre, almacenNombre, productoNombre, unidadMedida, cantidad, presentacionProducto, loteProducto, observaciones));
-    }
-
-    // 🟢 Mostrar confirmación antes de guardar
-    if (!mostrarConfirmacion(listaInventario)) {
-        JOptionPane.showMessageDialog(this, "Operación cancelada.", "Cancelar", JOptionPane.INFORMATION_MESSAGE);
-        return;
-    }
-
-    // 🔥 Verificar si algún lote ya existe antes de guardar
-    for (Inventario inv : listaInventario) {
-        if (inventarioDAO.loteExiste(inv.getLoteProducto())) {
-            JOptionPane.showMessageDialog(this, "Error: El lote '" + inv.getLoteProducto() + "' ya existe. Verifica los datos.", "Error", JOptionPane.ERROR_MESSAGE);
-            return;
-        }
-    }
-
-    // 🚀 Guardar productos en inventario
-    boolean guardadoExitoso = inventarioDAO.agregarProductos(listaInventario);
-
-    if (guardadoExitoso) {
-        // 🔄 También actualizar la tabla `totales`
+        // 🔥 Verificar si algún lote ya existe antes de guardar
         for (Inventario inv : listaInventario) {
-            inventarioDAO.actualizarTotales(
-                inv.getAlmacenNombre(),
-                inv.getClienteNombre(),
-                inv.getProductoNombre(),
-                inv.getPresentacionProducto(),
-                inv.getCantidad()
-            );
+            if (inventarioDAO.loteExiste(inv.getLoteProducto())) {
+                JOptionPane.showMessageDialog(this, "Error: El lote '" + inv.getLoteProducto() + "' ya existe. Verifica los datos.", "Error", JOptionPane.ERROR_MESSAGE);
+                return;
+            }
         }
 
-        JOptionPane.showMessageDialog(this, "Productos guardados exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
-        dispose(); // Cerrar la ventana después de guardar
-        new PantallaProductos().setVisible(true);
-    } else {
-        JOptionPane.showMessageDialog(this, "Error al guardar los productos.", "Error", JOptionPane.ERROR_MESSAGE);
-    }
-}
+        // 🚀 Guardar productos en inventario
+        boolean guardadoExitoso = inventarioDAO.agregarProductos(listaInventario);
 
+        if (guardadoExitoso) {
+            // 🔄 También actualizar la tabla `totales`
+            for (Inventario inv : listaInventario) {
+                inventarioDAO.actualizarTotales(
+                        inv.getAlmacenNombre(),
+                        inv.getClienteNombre(),
+                        inv.getProductoNombre(),
+                        inv.getPresentacionProducto(),
+                        inv.getCantidad()
+                );
+            }
+
+            JOptionPane.showMessageDialog(this, "Productos guardados exitosamente.", "Éxito", JOptionPane.INFORMATION_MESSAGE);
+            generarPDFAlta(listaInventario);
+            dispose(); // Cerrar la ventana después de guardar
+            new PantallaProductos().setVisible(true);
+        } else {
+            JOptionPane.showMessageDialog(this, "Error al guardar los productos.", "Error", JOptionPane.ERROR_MESSAGE);
+        }
+    }
 
     private void aplicarEstilos() {
         Color azul = new Color(0, 102, 204);
@@ -243,6 +240,12 @@ private void guardarProductos() {
         btnGuardar.setForeground(blanco);
         btnCancelar.setBackground(rojo);
         btnCancelar.setForeground(blanco);
+    }
+
+    private void bloquearClienteEnFilas() {
+        JTextField noEditable = new JTextField();
+        noEditable.setEditable(false);
+        tablaProductos.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(noEditable));
     }
 
     private String[] cargarProductos() {
@@ -276,7 +279,25 @@ private void guardarProductos() {
     }
 
     private void agregarFila() {
-        modeloTabla.addRow(new Object[]{"", "", "", "", "", "", ""});
+        Object cliente = "";
+
+        // Si aún no se ha seleccionado un cliente, usar JComboBox en la primera fila
+        if (clienteSeleccionado == null) {
+            JComboBox<String> comboClientes = new JComboBox<>(cargarClientes());
+            comboClientes.addActionListener(e -> {
+                clienteSeleccionado = (String) comboClientes.getSelectedItem();
+                bloquearClienteEnFilas();
+            });
+            tablaProductos.getColumnModel().getColumn(0).setCellEditor(new DefaultCellEditor(comboClientes));
+        } else {
+            cliente = clienteSeleccionado;
+        }
+
+        modeloTabla.addRow(new Object[]{cliente, "", "", "", "", "", ""});
+
+        if (clienteSeleccionado != null) {
+            bloquearClienteEnFilas();
+        }
     }
 
     private String[] cargarUnidadesMedida() {
@@ -315,43 +336,66 @@ private void guardarProductos() {
         columnModel.getColumn(6).setPreferredWidth(250); // Observaciones
         columnModel.getColumn(7).setPreferredWidth(120); // Lote
     }
-    
-    private boolean mostrarConfirmacion(List<Inventario> listaInventario) {
-    String[] columnas = {"Cliente", "Almacén", "Producto", "Unidad de Medida", "Cantidad", "Presentación", "Lote", "Observaciones"};
-    Object[][] datos = new Object[listaInventario.size()][8];
 
-    // 🔹 Llenar los datos para la tabla
-    for (int i = 0; i < listaInventario.size(); i++) {
-        Inventario inv = listaInventario.get(i);
-        datos[i][0] = inv.getClienteNombre();
-        datos[i][1] = inv.getAlmacenNombre();
-        datos[i][2] = inv.getProductoNombre();
-        datos[i][3] = inv.getUnidadMedida();
-        datos[i][4] = inv.getCantidad();
-        datos[i][5] = inv.getPresentacionProducto();
-        datos[i][6] = inv.getLoteProducto();
-        datos[i][7] = inv.getObservaciones();
+    private boolean mostrarConfirmacion(List<Inventario> listaInventario) {
+        String[] columnas = {"Cliente", "Almacén", "Producto", "Unidad de Medida", "Cantidad", "Presentación", "Lote", "Observaciones"};
+        Object[][] datos = new Object[listaInventario.size()][8];
+
+        // 🔹 Llenar los datos para la tabla
+        for (int i = 0; i < listaInventario.size(); i++) {
+            Inventario inv = listaInventario.get(i);
+            datos[i][0] = inv.getClienteNombre();
+            datos[i][1] = inv.getAlmacenNombre();
+            datos[i][2] = inv.getProductoNombre();
+            datos[i][3] = inv.getUnidadMedida();
+            datos[i][4] = inv.getCantidad();
+            datos[i][5] = inv.getPresentacionProducto();
+            datos[i][6] = inv.getLoteProducto();
+            datos[i][7] = inv.getObservaciones();
+        }
+
+        // 🔥 Crear la tabla para mostrar confirmación
+        JTable tablaConfirmacion = new JTable(datos, columnas);
+        tablaConfirmacion.setEnabled(false); // No editable
+        tablaConfirmacion.setRowHeight(25);
+        JScrollPane scrollPane = new JScrollPane(tablaConfirmacion);
+        scrollPane.setPreferredSize(new Dimension(800, 300));
+
+        // 🔹 Mostrar tabla en un JOptionPane
+        int confirmacion = JOptionPane.showConfirmDialog(
+                this,
+                scrollPane,
+                "Confirmar datos antes de guardar",
+                JOptionPane.YES_NO_OPTION,
+                JOptionPane.QUESTION_MESSAGE
+        );
+
+        return confirmacion == JOptionPane.YES_OPTION;
     }
 
-    // 🔥 Crear la tabla para mostrar confirmación
-    JTable tablaConfirmacion = new JTable(datos, columnas);
-    tablaConfirmacion.setEnabled(false); // No editable
-    tablaConfirmacion.setRowHeight(25);
-    JScrollPane scrollPane = new JScrollPane(tablaConfirmacion);
-    scrollPane.setPreferredSize(new Dimension(800, 300));
+    private void generarPDFAlta(List<Inventario> productos) {
+        if (productos.isEmpty()) {
+            return;
+        }
 
-    // 🔹 Mostrar tabla en un JOptionPane
-    int confirmacion = JOptionPane.showConfirmDialog(
-            this,
-            scrollPane,
-            "Confirmar datos antes de guardar",
-            JOptionPane.YES_NO_OPTION,
-            JOptionPane.QUESTION_MESSAGE
-    );
+        Inventario primer = productos.get(0);
+        String cliente = primer.getClienteNombre();
+        String almacen = primer.getAlmacenNombre();
+        String observaciones = primer.getObservaciones();
 
-    return confirmacion == JOptionPane.YES_OPTION;
-}
+        List<String[]> datos = new ArrayList<>();
+        for (Inventario inv : productos) {
+            datos.add(new String[]{
+                inv.getProductoNombre(),
+                inv.getUnidadMedida(),
+                String.valueOf(inv.getCantidad()),
+                inv.getPresentacionProducto(),
+                inv.getLoteProducto()
+            });
+        }
 
+        GeneradorPDFAltaProducto.generarPDF(cliente, almacen, datos, observaciones);
+    }
 
 
     // Variables declaration - do not modify//GEN-BEGIN:variables
