@@ -175,12 +175,13 @@ public class InventarioDAO {
 
     public boolean actualizarTotales(String nombreAlmacen, String nombreCliente, String nombreProducto, String presentacion, int cantidad) {
         String sqlVerificar = "SELECT total FROM totales WHERE nombre_almacen = ? AND nombre_cliente = ? AND nombre_producto = ? AND presentacion_producto = ?";
-        String sqlInsertar = "INSERT INTO totales (nombre_almacen, nombre_cliente, nombre_producto, presentacion_producto, total) VALUES (?, ?, ?, ?, ?)";
-        String sqlActualizar = "UPDATE totales SET total = total + ? WHERE nombre_almacen = ? AND nombre_cliente = ? AND nombre_producto = ? AND presentacion_producto = ?";
+        String sqlInsertar = "INSERT INTO totales (nombre_almacen, nombre_cliente, nombre_producto, presentacion_producto, total, total_unitario) VALUES (?, ?, ?, ?, ?, ?)";
+        String sqlActualizar = "UPDATE totales SET total = total + ?, total_unitario = total_unitario + ? WHERE nombre_almacen = ? AND nombre_cliente = ? AND nombre_producto = ? AND presentacion_producto = ?";
+
+        int totalUnitario = calcularTotalUnitario(cantidad, presentacion);
 
         try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement stmtVerificar = con.prepareStatement(sqlVerificar); PreparedStatement stmtInsertar = con.prepareStatement(sqlInsertar); PreparedStatement stmtActualizar = con.prepareStatement(sqlActualizar)) {
 
-            // Verificar si el producto ya existe en la tabla totales
             stmtVerificar.setString(1, nombreAlmacen);
             stmtVerificar.setString(2, nombreCliente);
             stmtVerificar.setString(3, nombreProducto);
@@ -188,20 +189,22 @@ public class InventarioDAO {
             ResultSet rs = stmtVerificar.executeQuery();
 
             if (rs.next()) {
-                // Producto ya existe, actualizar total
+                // Ya existe, actualiza
                 stmtActualizar.setInt(1, cantidad);
-                stmtActualizar.setString(2, nombreAlmacen);
-                stmtActualizar.setString(3, nombreCliente);
-                stmtActualizar.setString(4, nombreProducto);
-                stmtActualizar.setString(5, presentacion);
+                stmtActualizar.setInt(2, totalUnitario);
+                stmtActualizar.setString(3, nombreAlmacen);
+                stmtActualizar.setString(4, nombreCliente);
+                stmtActualizar.setString(5, nombreProducto);
+                stmtActualizar.setString(6, presentacion);
                 stmtActualizar.executeUpdate();
             } else {
-                // Producto no existe, insertarlo
+                // No existe, inserta
                 stmtInsertar.setString(1, nombreAlmacen);
                 stmtInsertar.setString(2, nombreCliente);
                 stmtInsertar.setString(3, nombreProducto);
                 stmtInsertar.setString(4, presentacion);
                 stmtInsertar.setInt(5, cantidad);
+                stmtInsertar.setInt(6, totalUnitario);
                 stmtInsertar.executeUpdate();
             }
             return true;
@@ -231,6 +234,21 @@ public class InventarioDAO {
             e.printStackTrace();
         }
         return totales;
+    }
+
+    private int calcularTotalUnitario(int cantidad, String presentacion) {
+        if (presentacion == null || !presentacion.contains("x")) {
+            return cantidad;
+        }
+
+        try {
+            String[] partes = presentacion.toLowerCase().split("x");
+            int unidadesPorPresentacion = Integer.parseInt(partes[0].trim());
+            return cantidad * unidadesPorPresentacion;
+        } catch (Exception e) {
+            e.printStackTrace();
+            return cantidad; // En caso de error, regresamos solo la cantidad
+        }
     }
 
 }
