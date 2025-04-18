@@ -14,8 +14,7 @@ public class ClienteDAO {
     public boolean agregarCliente(String nombreCliente, String domicilio, String rfc) {
         String sql = "INSERT INTO clientes (nombre_cliente, domicilio, RFC) VALUES (?, ?, ?)";
 
-        try (Connection con = ConexionBD.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, nombreCliente);
             ps.setString(2, domicilio);
@@ -35,9 +34,7 @@ public class ClienteDAO {
         List<String[]> clientes = new ArrayList<>();
         String sql = "SELECT * FROM clientes";
 
-        try (Connection con = ConexionBD.obtenerConexion();
-             Statement stmt = con.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+        try (Connection con = ConexionBD.obtenerConexion(); Statement stmt = con.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
 
             while (rs.next()) {
                 String id = rs.getString("id");
@@ -58,8 +55,7 @@ public class ClienteDAO {
     public boolean editarCliente(String id, String nuevoNombre, String nuevoDomicilio, String nuevoRFC) {
         String sql = "UPDATE clientes SET nombre_cliente = ?, domicilio = ?, RFC = ? WHERE id = ?";
 
-        try (Connection con = ConexionBD.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, nuevoNombre);
             ps.setString(2, nuevoDomicilio);
@@ -79,8 +75,7 @@ public class ClienteDAO {
     public boolean eliminarCliente(String id) {
         String sql = "DELETE FROM clientes WHERE id = ?";
 
-        try (Connection con = ConexionBD.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, id);
 
@@ -98,8 +93,7 @@ public class ClienteDAO {
         List<String[]> clientes = new ArrayList<>();
         String sql = "SELECT * FROM clientes WHERE LOWER(nombre_cliente) LIKE LOWER(?)";
 
-        try (Connection con = ConexionBD.obtenerConexion();
-             PreparedStatement ps = con.prepareStatement(sql)) {
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
 
             ps.setString(1, "%" + filtro + "%"); // Buscar clientes que contengan el texto
 
@@ -118,5 +112,23 @@ public class ClienteDAO {
         }
         return clientes;
     }
+
+    // Obtener solo los nombres de los clientes
+    public List<String> obtenerNombresClientes() {
+        List<String> nombres = new ArrayList<>();
+        String sql = "SELECT nombre_cliente FROM clientes";
+
+        try (Connection con = ConexionBD.obtenerConexion(); Statement stmt = con.createStatement(); ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                nombres.add(rs.getString("nombre_cliente"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return nombres;
+    }
+    
     
 }

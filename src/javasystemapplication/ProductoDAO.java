@@ -141,13 +141,13 @@ public class ProductoDAO {
 // 🔹 Obtener datos del producto por nombre
 
     public String[] obtenerProductoPorNombre(String nombreProducto) {
-        String sql = "SELECT nombre_producto, clase_producto, unidad_medida, conversion FROM productos WHERE nombre_producto = ?";
+        String sql = "SELECT producto_nombre, clase_producto, unidad_medida, conversion FROM productos WHERE producto_nombre = ?";
         try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
             ps.setString(1, nombreProducto);
             ResultSet rs = ps.executeQuery();
 
             if (rs.next()) {
-                String nombre = rs.getString("nombre_producto");
+                String nombre = rs.getString("producto_nombre");
                 String clase = rs.getString("clase_producto");
                 String unidadMedida = rs.getString("unidad_medida");
                 String conversion = rs.getString("conversion");
@@ -171,4 +171,46 @@ public class ProductoDAO {
             return -1;
         }
     }
+
+    // Obtener productos por cliente
+    public List<String> obtenerProductosPorCliente(String cliente) {
+        List<String> productos = new ArrayList<>();
+        String sql = "SELECT DISTINCT producto_nombre FROM inventario WHERE cliente_nombre = ?";
+
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, cliente);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                productos.add(rs.getString("producto_nombre"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return productos;
+    }
+
+// Obtener lotes por cliente y producto
+    public List<String> obtenerLotesPorClienteYProducto(String cliente, String producto) {
+        List<String> lotes = new ArrayList<>();
+        String sql = "SELECT lote_producto FROM inventario WHERE cliente_nombre = ? AND producto_nombre = ?";
+
+        try (Connection con = ConexionBD.obtenerConexion(); PreparedStatement ps = con.prepareStatement(sql)) {
+
+            ps.setString(1, cliente);
+            ps.setString(2, producto);
+            ResultSet rs = ps.executeQuery();
+
+            while (rs.next()) {
+                lotes.add(rs.getString("lote_producto"));
+            }
+
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }
+        return lotes;
+    }
+
 }
